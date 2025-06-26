@@ -53,6 +53,10 @@ def parse_args():
                    help='Fichero de mapa (.txt) en la carpeta Fuente')
     return p.parse_args()
 
+def inic(mapa):
+    """Inicializa la matriz camino con '.' en todas las celdas"""
+    return [['.' for _ in range(mapa.getAncho())] for _ in range(mapa.getAlto())]
+
 def main():
     args = parse_args()
     pygame.init()
@@ -94,6 +98,9 @@ def main():
     coste     = -1
     algoritmo = None
     font      = pygame.font.Font(None, 24)
+    
+    # Inicializar matriz camino
+    camino = inic(mapi)
 
     while True:
         for ev in pygame.event.get():
@@ -122,6 +129,9 @@ def main():
                         destino = cas
                 # Ejecutar algoritmo
                 if algoritmo and origen.fila>=0 and destino.fila>=0:
+                    # Reiniciar camino
+                    camino = inic(mapi)
+                    
                     if algoritmo == 'astar':
                         ruta, cal = a_star(
                             mapi,
@@ -136,7 +146,14 @@ def main():
                             (destino.fila, destino.col),
                             args.eps
                         )
-                    coste = len(ruta) - 1 if ruta else -1
+                    
+                    # Actualizar matriz camino
+                    if ruta:
+                        for (f, c) in ruta:
+                            camino[f][c] = 'X'
+                        coste = len(ruta) - 1
+                    else:
+                        coste = -1
 
         # Dibujar
         screen.fill(NEGRO)
@@ -151,11 +168,16 @@ def main():
                                  [(TAM+MARGEN)*c+MARGEN,
                                   (TAM+MARGEN)*f+MARGEN,
                                   TAM, TAM])
-        for (f, c) in ruta:
-            pygame.draw.rect(screen, AMARILLO,
-                             [(TAM+MARGEN)*c+MARGEN,
-                              (TAM+MARGEN)*f+MARGEN,
-                              TAM, TAM])
+        
+        # Dibujar camino usando la matriz camino
+        for f in range(mapi.getAlto()):
+            for c in range(mapi.getAncho()):
+                if camino[f][c] != '.':
+                    pygame.draw.rect(screen, AMARILLO,
+                                     [(TAM+MARGEN)*c+MARGEN,
+                                      (TAM+MARGEN)*f+MARGEN,
+                                      TAM, TAM])
+        
         if origen.fila>=0:
             screen.blit(img_rabbit,
                         [(TAM+MARGEN)*origen.col+MARGEN,
@@ -170,8 +192,10 @@ def main():
         screen.blit(font.render(f"w={slider.value:.2f}", True, AMARILLO),
                     (10, alto - MARGEN_INF))
         if coste >= 0:
-            screen.blit(font.render(f"Coste={coste}", True, AMARILLO),
-                        (ancho-150, alto - MARGEN_INF))
+            texto_coste = font.render(f"Coste: {coste:.1f}", True, AMARILLO)
+            screen.blit(texto_coste, (ancho-150, alto - MARGEN_INF))
+            texto_cal = font.render(f"Cal: {cal}", True, AMARILLO)
+            screen.blit(texto_cal, (ancho-150, alto - MARGEN_INF + 25))
         pygame.display.flip()
         reloj.tick(30)
 
